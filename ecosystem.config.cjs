@@ -1,7 +1,7 @@
 module.exports = {
   apps: [
     {
-      name: 'flixworld',
+      name: 'fwdrama',
       script: 'server.js',
       cwd: '/var/www/flixworld.xyz/FW-Drama',
 
