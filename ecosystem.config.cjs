@@ -2,26 +2,23 @@ module.exports = {
   apps: [
     {
       name: 'fwdrama',
-
-      // Run: npm run preview
-      script: 'npm',
-      args: 'run preview',
+      script: 'server.js',
       cwd: '/var/www/flixworld.xyz/FW-Drama',
 
-      // Single instance
+      // Run multiple instances equal to CPU count for load balancing
       instances: 1,
       exec_mode: 'fork',
 
-      // Auto-restart
+      // Auto-restart on crash
       autorestart: true,
       watch: false,
       max_restarts: 10,
       restart_delay: 3000,
 
-      // Memory threshold
+      // Memory threshold before auto-restart
       max_memory_restart: '300M',
 
-      // Environment
+      // Environment variables for production
       env: {
         NODE_ENV: 'production',
         PORT: 8080,
