@@ -24,7 +24,7 @@ const BADGE: Record<number, string> = {
 };
 
 const Rank = () => {
-  const [activeTab, setActiveTab] = useState('trending');
+  const [activeTab, setActiveTab] = useState('latest');
   const [dramas, setDramas]       = useState<Drama[]>([]);
   const [loading, setLoading]     = useState(true);
   const { lang } = useLanguage();

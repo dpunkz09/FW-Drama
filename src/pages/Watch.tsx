@@ -355,6 +355,11 @@ const Watch = () => {
     return `${Math.floor(s / 60)}:${Math.floor(s % 60).toString().padStart(2, '0')}`;
   };
 
+  // Route stream URLs through the server proxy so the browser always
+  // makes HTTPS requests — fixes mixed-content blocks on production
+  const proxyUrl = (raw: string) =>
+    raw.startsWith('http') ? `/stream?url=${encodeURIComponent(raw)}` : raw;
+
   // ── Stable callbacks for VideoSlot (prevent stale closures) ──────────────
   const onCurrentReady = useCallback(() => {
     setBuffering(false);
@@ -442,7 +447,7 @@ const Watch = () => {
         {currentEp && (
           <VideoSlot
             key={`current-${current}`}
-            url={currentEp.streams[0]?.url || currentEp.videoUrl}
+            url={proxyUrl(currentEp.streams[0]?.url || currentEp.videoUrl)}
             isHls={currentEp.isHls}
             poster={currentEp.video_pic || streamData.pic}
             muted={isMuted}
@@ -466,7 +471,7 @@ const Watch = () => {
         >
           <VideoSlot
             key={`staging-${staging}`}
-            url={stagingEp.streams[0]?.url || stagingEp.videoUrl}
+            url={proxyUrl(stagingEp.streams[0]?.url || stagingEp.videoUrl)}
             isHls={stagingEp.isHls}
             poster={stagingEp.video_pic || streamData.pic}
             muted={isMuted}
