@@ -13,7 +13,7 @@ export const useLanguage = create<LanguageState>()(
       setLang: (lang) => set({ lang }),
     }),
     {
-      name: 'dramabox-language',
+      name: 'flixworld-language',
     }
   )
 );

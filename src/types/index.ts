@@ -1,38 +1,22 @@
-export interface Tag {
-  tagId: number
-  tagName: string
-  tagEnName: string
-}
+// ── ReelShort API types ────────────────────────────────────────────────────────
 
 export interface Drama {
-  bookId: string
-  bookName: string
-  introduction: string
-  cover: string
-  chapterCount: number
-  playCount: string
-  tags: string[]
-  tagDetails: Tag[]
+  book_id: string;
+  title: string;
+  pic: string;
+  chapter_count: number;
+  collect_count: number;
+  theme: string[];
 }
 
-export interface Chapter {
-  chapterId: string
-  chapterIndex: number
-  isCharge: number
-  isPay: number
+export interface ReelShortApiResponse {
+  ok: boolean;
+  items: Drama[];
 }
 
-export interface VideoQuality {
-  quality: number
-  videoPath: string
-  isDefault: number
-}
-
-export interface WatchData {
-  bookId: string
-  chapterIndex: number
-  videoUrl: string
-  qualities: VideoQuality[]
-  cover: string
-  bookName: string
+export interface SearchParams {
+  lang?: string;
+  keyword?: string;
+  book_id?: string;
+  chapter_index?: number;
 }

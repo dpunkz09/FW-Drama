@@ -1,141 +1,89 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useLanguage } from '../store/language';
+import { formatCount } from '../utils/format';
+import type { Drama, ReelShortApiResponse } from '../types';
 
-interface Drama {
-  bookId: string;
-  bookName: string;
-  introduction: string;
-  cover: string;
-  chapterCount: number;
-  playCount: string;
-  tags: string[];
-  corner?: {
-    cornerType: number;
-    name: string;
-    color: string;
-  };
-  rank?: {
-    rankType: number;
-    hotCode: string;
-    recCopy: string;
-    sort: number;
-  };
-}
+export { formatCount };
 
-interface ApiResponse {
-  success: boolean;
-  data: {
-    list: Drama[];
-  };
-}
-
+// ── For You feed ──────────────────────────────────────────────────────────────
 export const useDramas = () => {
   const [dramas, setDramas] = useState<Drama[]>([]);
   const [loading, setLoading] = useState(true);
   const { lang } = useLanguage();
 
   useEffect(() => {
-    const fetchDramas = async () => {
-      try {
-        const response = await fetch(`/api/foryou/1?lang=${lang}`);
-        const data: ApiResponse = await response.json();
-        if (data.success) {
-          setDramas(data.data.list);
-        }
-      } catch (error) {
-        console.error('Failed to fetch dramas:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const controller = new AbortController();
+    setLoading(true);
 
-    fetchDramas();
+    fetch(`/api/foryou?lang=${lang}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then((data: ReelShortApiResponse) => {
+        if (data.ok && data.items) setDramas(data.items);
+      })
+      .catch(e => { if (e.name !== 'AbortError') console.error('useDramas:', e); })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [lang]);
 
   return { dramas, loading };
 };
 
+// ── Latest feed ───────────────────────────────────────────────────────────────
 export const useInfiniteDramas = () => {
   const [dramas, setDramas] = useState<Drama[]>([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMore, setLoadingMore] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
   const { lang } = useLanguage();
 
-  const fetchDramas = useCallback(async (pageNum: number, isLoadMore = false) => {
-    if (isLoadMore) {
-      setLoadingMore(true);
-    } else {
-      setLoading(true);
-    }
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    setDramas([]);
 
-    try {
-      const response = await fetch(`/api/new/${pageNum}?lang=${lang}&pageSize=50`);
-      const data: ApiResponse = await response.json();
-      
-      if (data.success) {
-        const newDramas = data.data.list;
-        
-        if (isLoadMore) {
-          setDramas(prev => [...prev, ...newDramas]);
-        } else {
-          setDramas(newDramas);
-        }
-        
-        setHasMore(newDramas.length >= 50);
-      }
-    } catch (error) {
-      console.error('Failed to fetch dramas:', error);
-    } finally {
-      setLoading(false);
-      setLoadingMore(false);
-    }
+    fetch(`/api/latest?lang=${lang}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then((data: ReelShortApiResponse) => {
+        if (data.ok && data.items) setDramas(data.items);
+      })
+      .catch(e => { if (e.name !== 'AbortError') console.error('useInfiniteDramas:', e); })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
   }, [lang]);
 
-  useEffect(() => {
-    fetchDramas(1);
-  }, [fetchDramas]);
-
-  const loadMore = useCallback(() => {
-    if (!loadingMore && hasMore) {
-      const nextPage = page + 1;
-      setPage(nextPage);
-      fetchDramas(nextPage, true);
-    }
-  }, [page, loadingMore, hasMore, fetchDramas]);
-
-  return { dramas, loading, loadingMore, hasMore, loadMore };
+  // ReelShort returns everything in one response — no real pagination
+  return { dramas, loading, loadingMore: false, hasMore: false, loadMore: () => {} };
 };
 
+// ── Trending (Rank page) ──────────────────────────────────────────────────────
 export const useRankDramas = () => {
   const [dramas, setDramas] = useState<Drama[]>([]);
   const [loading, setLoading] = useState(true);
+  const { lang } = useLanguage();
 
   useEffect(() => {
-    const fetchDramas = async () => {
-      try {
-        const response = await fetch('/api/rank/1?lang=en');
-        const data: ApiResponse = await response.json();
-        if (data.success) {
-          setDramas(data.data.list);
-        }
-      } catch (error) {
-        console.error('Failed to fetch rank dramas:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const controller = new AbortController();
+    setLoading(true);
 
-    fetchDramas();
-  }, []);
+    fetch(`/api/trending?lang=${lang}`, { signal: controller.signal })
+      .then(r => r.json())
+      .then((data: ReelShortApiResponse) => {
+        if (data.ok && data.items) setDramas(data.items);
+      })
+      .catch(e => { if (e.name !== 'AbortError') console.error('useRankDramas:', e); })
+      .finally(() => setLoading(false));
+
+    return () => controller.abort();
+  }, [lang]);
 
   return { dramas, loading };
 };
 
+// ── Search ────────────────────────────────────────────────────────────────────
 export const useSearchDramas = (query: string) => {
   const [dramas, setDramas] = useState<Drama[]>([]);
   const [loading, setLoading] = useState(false);
+  const { lang } = useLanguage();
 
   useEffect(() => {
     if (!query.trim()) {
@@ -143,24 +91,26 @@ export const useSearchDramas = (query: string) => {
       return;
     }
 
-    const fetchDramas = async () => {
-      setLoading(true);
-      try {
-        const response = await fetch(`/api/search/${encodeURIComponent(query)}/1?lang=en&pageSize=20`);
-        const data: ApiResponse = await response.json();
-        if (data.success) {
-          setDramas(data.data.list);
-        }
-      } catch (error) {
-        console.error('Failed to search dramas:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    const controller = new AbortController();
 
-    const debounce = setTimeout(fetchDramas, 300);
-    return () => clearTimeout(debounce);
-  }, [query]);
+    // Debounce: wait 400 ms before firing the request
+    const timer = setTimeout(() => {
+      setLoading(true);
+      fetch(`/search?lang=${lang}&keyword=${encodeURIComponent(query)}`, { signal: controller.signal })
+        .then(r => r.json())
+        .then((data: ReelShortApiResponse) => {
+          if (data.ok && data.items) setDramas(data.items);
+          else setDramas([]);
+        })
+        .catch(e => { if (e.name !== 'AbortError') console.error('useSearchDramas:', e); })
+        .finally(() => setLoading(false));
+    }, 400);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, lang]);
 
   return { dramas, loading };
 };

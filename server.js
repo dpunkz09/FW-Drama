@@ -6,31 +6,66 @@ config()
 
 const app = express()
 
-const API_URL = process.env.API_URL || 'https://captain.sapimu.au/dramabox/api/v1'
-const TOKEN = process.env.AUTH_TOKEN
+// ReelShort API Configuration
+const API_URL = process.env.API_URL || 'https://reelshort.vercel.app'
 
-const ALLOWED_PATHS = ['/foryou/', '/new/', '/rank/', '/search/', '/suggest/', '/classify', '/chapters/', '/watch/']
+// ReelShort API public endpoints (no authentication required)
+const ALLOWED_PATHS = [
+  '/api/foryou',
+  '/api/latest', 
+  '/api/trending',
+  '/search',
+  '/api/details',
+  '/api/chapters/details',
+  '/api/stream/all-episode'
+]
 
-app.use('/api', async (req, res) => {
+// Proxy middleware for both /api and /search endpoints
+const proxyHandler = async (req, res) => {
   const path = req.path
+  const fullPath = req.originalUrl.split('?')[0]
   
-  if (!ALLOWED_PATHS.some(p => path.startsWith(p))) {
-    return res.status(403).json({ error: 'Forbidden' })
+  // Check if the path is allowed
+  const isAllowed = ALLOWED_PATHS.some(p => 
+    fullPath === p || 
+    fullPath.startsWith(p + '/') ||
+    path === p ||
+    path.startsWith(p + '/')
+  )
+  
+  if (!isAllowed) {
+    return res.status(403).json({ error: 'Forbidden path' })
   }
 
   try {
-    const response = await axios.get(`${API_URL}${path}`, {
+    const url = `${API_URL}${fullPath}`
+    
+    console.log('Proxying ReelShort request:', {
+      url,
+      fullPath,
+      query: req.query
+    })
+    
+    // ReelShort API is public, no authentication needed
+    const response = await axios.get(url, {
       params: req.query,
-      headers: { Authorization: `Bearer ${TOKEN}` }
+      headers: { 
+      'User-Agent': 'FlixWorld-Proxy/1.0'
+      }
     })
     
     res.json(response.data)
   } catch (err) {
+    console.error('Proxy error:', err.message)
     res.status(err.response?.status || 500).json({ 
-      error: 'For full API access, check Telegram @sapitokenbot' 
+      error: 'Failed to fetch from ReelShort API',
+      details: err.message
     })
   }
-})
+}
+
+app.use('/api', proxyHandler)
+app.use('/search', proxyHandler)
 
 app.use(express.static('dist'))
 app.get('/{*path}', (req, res) => res.sendFile('index.html', { root: 'dist' }))
