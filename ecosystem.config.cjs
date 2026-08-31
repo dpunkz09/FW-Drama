@@ -21,7 +21,7 @@ module.exports = {
       // Environment variables for production
       env: {
         NODE_ENV: 'production',
-        PORT: 7777,
+        PORT: 8080,
       },
 
       // Logs
