@@ -127,4 +127,4 @@ app.get('/stream', async (req, res) => {
 app.use(express.static('dist'))
 app.get('/{*path}', (req, res) => res.sendFile('index.html', { root: 'dist' }))
 
-app.listen(7777, () => console.log('Server running on port 7777'))
+app.listen(8080, () => console.log('Server running on port 8080'))
