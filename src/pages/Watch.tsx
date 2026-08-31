@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Play, Pause, Volume2, VolumeX, Heart, Info, Share2 } from 'lucide-react';
 import Hls from 'hls.js';
 import { useLanguage } from '../store/language';
+import { useSaveProgress } from '../hooks/useWatchProgress';
 
 interface Episode {
   index: number;
@@ -124,13 +125,18 @@ type SlideDir = 'up' | 'down' | null;
 const Watch = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { lang } = useLanguage();
+  const saveProgress = useSaveProgress();
+
+  // Starting episode — read from ?ep=N query param (set by Continue Watching)
+  const startEp = Math.max(0, parseInt(searchParams.get('ep') ?? '0', 10) || 0);
 
   const [streamData, setStreamData] = useState<StreamData | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Current / next indices
-  const [current, setCurrent] = useState(0);
+  // Current / next indices — initialise from startEp
+  const [current, setCurrent] = useState(startEp);
   const [staging, setStaging] = useState<number | null>(null); // episode being slid in
 
   // Animation state
@@ -170,7 +176,19 @@ const Watch = () => {
 
     fetch(`/api/stream/all-episode?lang=${lang}&bookId=${id}`, { signal: controller.signal })
       .then(r => r.json())
-      .then(d => { if (d?.ok) setStreamData(d); })
+      .then(d => {
+        if (d?.ok) {
+          setStreamData(d);
+          // Save initial progress so this drama appears in continue watching
+          saveProgress({
+            book_id: d.bookId,
+            title: d.title,
+            pic: d.episodes?.[startEp]?.video_pic || d.pic,
+            chapter: startEp,
+            total: d.episodes?.length ?? 0,
+          });
+        }
+      })
       .catch(e => { if (e.name !== 'AbortError') console.error('Watch fetch:', e); })
       .finally(() => setLoading(false));
 
@@ -211,6 +229,18 @@ const Watch = () => {
       setProgress(0);
       setCurrentTime(0);
       setDuration(0);
+
+      // Save progress for the episode that just became active
+      if (streamData) {
+        const ep = streamData.episodes[targetIdx];
+        saveProgress({
+          book_id: streamData.bookId,
+          title: streamData.title,
+          pic: ep?.video_pic || streamData.pic,
+          chapter: targetIdx,
+          total: streamData.episodes.length,
+        });
+      }
 
       // Keep controls visible briefly after episode lands
       clearTimeout(controlsTimerRef.current);
