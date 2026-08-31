@@ -70,4 +70,4 @@ app.use('/search', proxyHandler)
 app.use(express.static('dist'))
 app.get('/{*path}', (req, res) => res.sendFile('index.html', { root: 'dist' }))
 
-app.listen(3000, () => console.log('Server running on port 3000'))
+app.listen(7777, () => console.log('Server running on port 7777'))
