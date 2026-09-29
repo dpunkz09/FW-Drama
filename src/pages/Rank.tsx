@@ -1,20 +1,18 @@
 import { TrendingUp, Flame, Clock, Users } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../store/language';
+import { useRankDramas } from '../hooks/useDramas';
 import { formatCount } from '../utils/format';
-import type { Drama, ReelShortApiResponse } from '../types';
 
 interface Tab {
   id: string;
   label: string;
   icon: React.ReactNode;
-  endpoint: string;
 }
 
 const TABS: Tab[] = [
-  { id: 'latest',   label: 'Latest',   icon: <Clock size={14} />,      endpoint: '/api/latest'   },
-  { id: 'trending', label: 'Trending', icon: <TrendingUp size={14} />, endpoint: '/api/trending' },
+  { id: 'trending', label: 'Trending', icon: <TrendingUp size={14} /> },
+  { id: 'latest',   label: 'Latest',   icon: <Clock size={14} /> },
 ];
 
 const BADGE: Record<number, string> = {
@@ -24,27 +22,14 @@ const BADGE: Record<number, string> = {
 };
 
 const Rank = () => {
-  const [activeTab, setActiveTab] = useState('latest');
-  const [dramas, setDramas]       = useState<Drama[]>([]);
-  const [loading, setLoading]     = useState(true);
-  const { lang } = useLanguage();
+  const [activeTab, setActiveTab] = useState('trending');
+  const { dramas, loading } = useRankDramas();
 
-  useEffect(() => {
-    const tab = TABS.find(t => t.id === activeTab)!;
-    const controller = new AbortController();
-    setLoading(true);
-    setDramas([]);
-
-    fetch(`${tab.endpoint}?lang=${lang}`, { signal: controller.signal })
-      .then(r => r.json())
-      .then((data: ReelShortApiResponse) => {
-        if (data.ok && data.items) setDramas(data.items);
-      })
-      .catch(e => { if (e.name !== 'AbortError') console.error('Rank fetch:', e); })
-      .finally(() => setLoading(false));
-
-    return () => controller.abort();
-  }, [activeTab, lang]);
+  // For now, we only have one list (trending/views)
+  // "Latest" tab would show the same list or could be sorted by ID
+  const displayDramas = activeTab === 'latest' 
+    ? [...dramas].sort((a, b) => parseInt(b.book_id) - parseInt(a.book_id))
+    : dramas;
 
   return (
     <div className="space-y-5 pt-2">
@@ -78,9 +63,9 @@ const Rank = () => {
       )}
 
       {/* List */}
-      {!loading && dramas.length > 0 && (
+      {!loading && displayDramas.length > 0 && (
         <div className="space-y-3">
-          {dramas.map((drama, index) => (
+          {displayDramas.map((drama, index) => (
             <Link key={drama.book_id} to={`/watch/${drama.book_id}`} className="block group">
               <div className="flex gap-3 p-3 rounded-xl bg-zinc-900/50 hover:bg-zinc-800/80 transition-colors">
                 {/* Rank badge */}
@@ -115,10 +100,14 @@ const Rank = () => {
                           <Users size={11} />
                           <span>{formatCount(drama.collect_count)}</span>
                         </div>
-                        <span className="text-zinc-700">·</span>
+                        {drama.chapter_count > 0 && (
+                          <>
+                            <span className="text-zinc-700">·</span>
+                            <span>{drama.chapter_count} ep</span>
+                          </>
+                        )}
                       </>
                     )}
-                    <span>{drama.chapter_count} ep</span>
                   </div>
                   {drama.theme?.length > 0 && (
                     <div className="flex gap-1 flex-wrap">
@@ -137,7 +126,7 @@ const Rank = () => {
       )}
 
       {/* Empty */}
-      {!loading && dramas.length === 0 && (
+      {!loading && displayDramas.length === 0 && (
         <div className="text-center py-16 text-zinc-500">
           <TrendingUp size={40} className="mx-auto mb-3 opacity-30" />
           <p className="text-sm">No dramas available</p>

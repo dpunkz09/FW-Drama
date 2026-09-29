@@ -14,6 +14,12 @@ export function useSaveProgress() {
     chapter: number;
     total: number;
   }) => {
+    // Skip if Supabase not configured
+    if (!supabase) {
+      console.debug('[watch_progress] skipped - Supabase not configured');
+      return;
+    }
+
     // Debounce: wait 1.5s after last call to avoid flooding DB on rapid swipes
     clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
@@ -56,6 +62,13 @@ export function useContinueWatching() {
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(() => {
+    // Skip if Supabase not configured
+    if (!supabase) {
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
     const device_id = getDeviceId();
     setLoading(true);
 

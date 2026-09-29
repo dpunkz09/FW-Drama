@@ -7,7 +7,7 @@ import { formatCount } from '../utils/format';
 
 const Home = () => {
   const { dramas: featuredDramas, loading: featuredLoading } = useDramas();
-  const { dramas, loading } = useInfiniteDramas();
+  const { dramas, loading, loadingMore, hasMore, loadMore } = useInfiniteDramas();
   const { items: continueItems, loading: continueLoading, refresh } = useContinueWatching();
 
   // Re-fetch when user navigates back to this tab
@@ -17,9 +17,19 @@ const Home = () => {
     return () => document.removeEventListener('visibilitychange', onVisible);
   }, [refresh]);
 
-  // Stable passive scroll listener (no-op; placeholder if pagination is added)
+  // Infinite scroll - load more when near bottom
   const scrollHandlerRef = useRef<() => void>(() => {});
-  scrollHandlerRef.current = () => {};
+  scrollHandlerRef.current = () => {
+    if (loadingMore || !hasMore) return;
+    
+    const scrollPosition = window.innerHeight + window.scrollY;
+    const threshold = document.documentElement.scrollHeight - 500; // 500px before bottom
+    
+    if (scrollPosition >= threshold) {
+      loadMore();
+    }
+  };
+  
   useEffect(() => {
     const fn = () => scrollHandlerRef.current();
     window.addEventListener('scroll', fn, { passive: true });
@@ -126,7 +136,12 @@ const Home = () => {
                   </Link>
                 ))}
               </div>
-              {dramas.length > 0 && (
+              {loadingMore && (
+                <div className="flex items-center justify-center py-6">
+                  <div className="animate-spin w-6 h-6 border-2 border-red-500 border-t-transparent rounded-full" />
+                </div>
+              )}
+              {!hasMore && dramas.length > 0 && (
                 <div className="text-center py-6 text-sm text-muted">
                   All dramas loaded ({dramas.length} total)
                 </div>

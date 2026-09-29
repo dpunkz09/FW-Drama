@@ -1,75 +1,72 @@
 import { Grid, Tag } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../store/language';
+import api from '../api/client';
 import { formatCount } from '../utils/format';
-import type { Drama, ReelShortApiResponse } from '../types';
+import type { Drama, SeriesListItem, seriesToDrama } from '../types';
+import { seriesToDrama as transformSeries } from '../types';
 
-// ReelShort doesn't have a dedicated /categories endpoint.
-// We derive themes from the /api/foryou feed and use them as filter labels.
-// Clicking a theme filters the already-loaded dramas client-side (no extra request).
-
+// Shortical categories are extracted from all series data
 const Category = () => {
   const [allDramas, setAllDramas]         = useState<Drama[]>([]);
-  const [themes, setThemes]               = useState<string[]>([]);
-  const [selectedTheme, setSelectedTheme] = useState<string | null>(null);
+  const [categories, setCategories]       = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [loading, setLoading]             = useState(true);
-  const { lang } = useLanguage();
 
-  // Fetch For-You feed once → derive theme list + drama list
+  // Fetch all series once → derive category list + drama list
   useEffect(() => {
-    const controller = new AbortController();
     setLoading(true);
     setAllDramas([]);
-    setThemes([]);
-    setSelectedTheme(null);
+    setCategories([]);
+    setSelectedCategory(null);
 
-    fetch(`/api/foryou?lang=${lang}`, { signal: controller.signal })
-      .then(r => r.json())
-      .then((data: ReelShortApiResponse) => {
-        if (!data.ok || !data.items) return;
+    api.get<SeriesListItem[]>('/api/v1/series?pageSize=100')
+      .then(response => {
+        const transformed = response.data.map(transformSeries);
+        setAllDramas(transformed);
 
-        setAllDramas(data.items);
-
-        // Extract unique themes, preserve insertion order
-        const seen = new Set<string>();
-        data.items.forEach(d => d.theme?.forEach(t => seen.add(t)));
-        const themeList = Array.from(seen).slice(0, 10);
-        setThemes(themeList);
-        if (themeList.length > 0) setSelectedTheme(themeList[0]);
+        // Extract unique categories from all dramas
+        const categorySet = new Set<string>();
+        response.data.forEach(item => {
+          if (item.series.categories) {
+            item.series.categories.forEach(cat => categorySet.add(cat));
+          }
+        });
+        
+        const categoryList = Array.from(categorySet).sort();
+        setCategories(categoryList);
+        if (categoryList.length > 0) setSelectedCategory(categoryList[0]);
       })
-      .catch(e => { if (e.name !== 'AbortError') console.error('Category fetch:', e); })
+      .catch(e => console.error('Category fetch:', e))
       .finally(() => setLoading(false));
+  }, []);
 
-    return () => controller.abort();
-  }, [lang]);
-
-  // Client-side filter — no extra request needed
-  const filtered = selectedTheme
-    ? allDramas.filter(d => d.theme?.includes(selectedTheme))
+  // Client-side filter by selected category
+  const filtered = selectedCategory
+    ? allDramas.filter(d => d.theme?.includes(selectedCategory))
     : allDramas;
 
   return (
     <div className="space-y-6 pt-2">
       <div className="flex items-center gap-2">
         <Grid size={20} className="text-red-500" />
-        <h1 className="text-xl font-bold">Category</h1>
+        <h1 className="text-xl font-bold">Categories</h1>
       </div>
 
-      {/* Theme tabs */}
-      {themes.length > 0 && (
+      {/* Category tabs */}
+      {categories.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {themes.map(theme => (
+          {categories.map(category => (
             <button
-              key={theme}
-              onClick={() => setSelectedTheme(theme)}
+              key={category}
+              onClick={() => setSelectedCategory(category)}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all
-                ${selectedTheme === theme
+                ${selectedCategory === category
                   ? 'bg-red-500 text-white shadow-md shadow-red-500/30'
                   : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'}`}
             >
               <Tag size={11} />
-              {theme}
+              {category}
             </button>
           ))}
         </div>
@@ -107,7 +104,7 @@ const Category = () => {
       )}
 
       {/* Empty */}
-      {!loading && filtered.length === 0 && themes.length > 0 && (
+      {!loading && filtered.length === 0 && categories.length > 0 && (
         <div className="text-center py-12 text-zinc-500">
           <p className="text-sm">No dramas in this category</p>
         </div>

@@ -1,56 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Search as SearchIcon, X, TrendingUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { useLanguage } from '../store/language';
+import { useSearchDramas, useRankDramas } from '../hooks/useDramas';
 import { formatCount } from '../utils/format';
-import type { Drama, ReelShortApiResponse } from '../types';
 
 const Search = () => {
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<Drama[]>([]);
-  const [trendingDramas, setTrendingDramas] = useState<Drama[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { lang } = useLanguage();
-
-  // ── Trending on mount / lang change ────────────────────────────────────────
-  useEffect(() => {
-    const controller = new AbortController();
-
-    fetch(`/api/trending?lang=${lang}`, { signal: controller.signal })
-      .then(r => r.json())
-      .then((data: ReelShortApiResponse) => {
-        if (data.ok && data.items) setTrendingDramas(data.items.slice(0, 10));
-      })
-      .catch(e => { if (e.name !== 'AbortError') console.error('trending:', e); });
-
-    return () => controller.abort();
-  }, [lang]);
-
-  // ── Debounced search with AbortController ──────────────────────────────────
-  useEffect(() => {
-    if (!query.trim()) {
-      setResults([]);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => {
-      setLoading(true);
-      fetch(`/search?lang=${lang}&keyword=${encodeURIComponent(query)}`, { signal: controller.signal })
-        .then(r => r.json())
-        .then((data: ReelShortApiResponse) => {
-          if (data.ok && data.items) setResults(data.items);
-          else setResults([]);
-        })
-        .catch(e => { if (e.name !== 'AbortError') console.error('search:', e); })
-        .finally(() => setLoading(false));
-    }, 400);
-
-    return () => {
-      clearTimeout(timer);
-      controller.abort();
-    };
-  }, [query, lang]);
+  const { dramas: results, loading } = useSearchDramas(query);
+  const { dramas: trendingDramas } = useRankDramas();
 
   return (
     <div className="space-y-4 pt-2">
@@ -104,7 +61,9 @@ const Search = () => {
                   )}
                 </div>
                 <h3 className="text-xs font-medium line-clamp-2 mb-1 leading-tight">{drama.title}</h3>
-                <p className="text-xs text-muted">{drama.chapter_count} episodes</p>
+                {drama.chapter_count > 0 && (
+                  <p className="text-xs text-muted">{drama.chapter_count} episodes</p>
+                )}
               </Link>
             ))}
           </div>
@@ -128,7 +87,7 @@ const Search = () => {
             <h2 className="text-sm font-semibold text-zinc-300">Trending Now</h2>
           </div>
           <div className="space-y-3">
-            {trendingDramas.map((drama, index) => (
+            {trendingDramas.slice(0, 10).map((drama, index) => (
               <Link
                 key={drama.book_id}
                 to={`/watch/${drama.book_id}`}
@@ -161,7 +120,9 @@ const Search = () => {
                     {drama.collect_count > 0 && (
                       <><span>{formatCount(drama.collect_count)} views</span><span>·</span></>
                     )}
-                    <span>{drama.chapter_count} episodes</span>
+                    {drama.chapter_count > 0 && (
+                      <span>{drama.chapter_count} episodes</span>
+                    )}
                   </div>
                 </div>
               </Link>
