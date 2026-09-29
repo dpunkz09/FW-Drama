@@ -54,10 +54,8 @@ export interface Episode {
   thumbnail?: string;
 }
 
-export interface EpisodesResponse {
-  episodes: Episode[];
-  total: number;
-}
+// The episodes endpoint returns an array directly, not an object
+export type EpisodesResponse = Episode[];
 
 // Compatibility type for existing components (maps Shortical to old ReelShort structure)
 export interface Drama {

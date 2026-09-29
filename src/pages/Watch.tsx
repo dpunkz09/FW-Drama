@@ -69,10 +69,12 @@ const Watch = () => {
       api.get<EpisodesResponse>(`/api/v1/series/${id}/episodes`)
     ])
       .then(([seriesResponse, episodesResponse]) => {
+        console.log('Episodes API Response:', episodesResponse.data);
         setSeriesData(seriesResponse.data);
         
-        // Set the actual episode count from the API
-        const episodeCount = episodesResponse.data.total || episodesResponse.data.episodes.length;
+        // The API returns an array of episodes directly
+        const episodeCount = episodesResponse.data.length;
+        console.log('Episode count:', episodeCount);
         setTotalEpisodes(episodeCount);
         
         // Save initial progress
@@ -86,6 +88,7 @@ const Watch = () => {
       })
       .catch(e => {
         console.error('Watch: Failed to fetch series data:', e);
+        console.error('Error details:', e.response?.data);
         // If episodes endpoint fails, fallback to a reasonable default
         setTotalEpisodes(100);
       })
