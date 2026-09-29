@@ -116,6 +116,11 @@ const Watch = () => {
     return `https://dirjqbe1kaah2.cloudfront.net/${id}/${episodeIndex + 1}/video.m3u8`;
   };
 
+  // Filler image URL builder: https://dirjqbe1kaah2.cloudfront.net/{id}/{episode}/filler.webp
+  const getFillerUrl = (episodeIndex: number) => {
+    return `https://dirjqbe1kaah2.cloudfront.net/${id}/${episodeIndex + 1}/filler.webp`;
+  };
+
   // Setup HLS player for a video element
   const setupHls = (videoEl: HTMLVideoElement, url: string, hlsRef: React.MutableRefObject<Hls | null>, onReady: () => void) => {
     // Cleanup existing HLS instance
@@ -385,7 +390,7 @@ const Watch = () => {
         <video
           ref={currentVideoRef}
           className="absolute inset-0 w-full h-full object-contain bg-black"
-          poster={seriesData.thumbnail}
+          poster={getFillerUrl(current)}
           playsInline
           muted={isMuted}
           onTimeUpdate={onTimeUpdate}
@@ -403,7 +408,7 @@ const Watch = () => {
           <video
             ref={stagingVideoRef}
             className="absolute inset-0 w-full h-full object-contain bg-black"
-            poster={seriesData.thumbnail}
+            poster={getFillerUrl(staging)}
             playsInline
             muted={isMuted}
           />

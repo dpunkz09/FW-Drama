@@ -37,6 +37,7 @@ Your FW-Drama project has been successfully migrated from ReelShort API to Short
 ### 6. Watch Page ✅ **NEW!**
 - **Video Streaming**: CloudFront CDN with HLS
 - **URL Format**: `https://dirjqbe1kaah2.cloudfront.net/{id}/{episode}/video.m3u8`
+- **Filler Images**: Episode-specific loading images at `/filler.webp`
 - **Features**:
   - HLS.js player with fallback for Safari
   - Swipe up/down to change episodes

@@ -35,11 +35,12 @@
 ### Video Streaming ✅ IMPLEMENTED
 The Watch page now uses Shortical's CloudFront CDN for video streaming:
 - **Endpoint**: `https://dirjqbe1kaah2.cloudfront.net/{drama_id}/{episode}/video.m3u8`
+- **Filler Image**: `https://dirjqbe1kaah2.cloudfront.net/{drama_id}/{episode}/filler.webp` (shown while loading)
 - **Format**: HLS (HTTP Live Streaming)
 - **Player**: HLS.js for browsers, native for Safari
 - **Features**: Episode navigation, swipe gestures, progress tracking
 
-**Note**: Episode numbers are 1-indexed in the URL (episode 1 = `/1/video.m3u8`)
+**Note**: Episode numbers are 1-indexed in the URL (episode 1 = `/1/video.m3u8` and `/1/filler.webp`)
 
 ### Firebase Authentication Setup
 The app uses **Firebase Anonymous Authentication** to obtain Bearer tokens:
