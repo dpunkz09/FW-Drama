@@ -47,6 +47,18 @@ export interface SeriesDetailResponse {
   isEpisodicRelease: boolean;
 }
 
+export interface Episode {
+  id: number;
+  episode_number: number;
+  title?: string;
+  thumbnail?: string;
+}
+
+export interface EpisodesResponse {
+  episodes: Episode[];
+  total: number;
+}
+
 // Compatibility type for existing components (maps Shortical to old ReelShort structure)
 export interface Drama {
   book_id: string;

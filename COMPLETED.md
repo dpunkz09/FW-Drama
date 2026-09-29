@@ -52,6 +52,7 @@ Your FW-Drama project has been successfully migrated from ReelShort API to Short
 |---------|----------|--------|
 | Series List | `GET /api/v1/series?pageSize=15` | ✅ |
 | Series Details | `GET /api/v1/series/{id}` | ✅ |
+| Episodes | `GET /api/v1/series/{id}/episodes` | ✅ |
 | Video Streaming | `https://dirjqbe1kaah2.cloudfront.net/{id}/{ep}/video.m3u8` | ✅ |
 
 ## 🔧 Configuration
@@ -137,7 +138,7 @@ Bearer tokens expire after **1 hour**. When you see 401 errors:
 3. Restart dev server
 
 ### Episode Count
-The `/api/v1/series` endpoint doesn't return episode count. The app assumes 100 episodes max. You can adjust this in `Watch.tsx` if needed.
+The `/api/v1/series` endpoint doesn't return episode count. The app now fetches the actual episode count from `/api/v1/series/{id}/episodes` and displays only available episodes in the episode list. If the API call fails, it falls back to 100 episodes.
 
 ### No Search API
 Shortical doesn't have a dedicated search endpoint. Search uses client-side filtering of pre-loaded series (100 max).

@@ -4,7 +4,7 @@ import { ArrowLeft, Play, Pause, Volume2, VolumeX, Heart, Info, Share2, Loader }
 import Hls from 'hls.js';
 import { useSaveProgress } from '../hooks/useWatchProgress';
 import api from '../api/client';
-import type { SeriesDetailResponse } from '../types';
+import type { SeriesDetailResponse, EpisodesResponse } from '../types';
 
 const SWIPE_THRESHOLD = 55;
 const SLIDE_DURATION = 380; // ms
@@ -21,7 +21,7 @@ const Watch = () => {
 
   const [seriesData, setSeriesData] = useState<SeriesDetailResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [totalEpisodes, setTotalEpisodes] = useState(100); // Default, will update from API
+  const [totalEpisodes, setTotalEpisodes] = useState(0); // Will be fetched from API
 
   // Current / staging episode indices
   const [current, setCurrent] = useState(startEp);
@@ -62,23 +62,33 @@ const Watch = () => {
     if (!id) return;
     
     setLoading(true);
-    api.get<SeriesDetailResponse>(`/api/v1/series/${id}`)
-      .then(response => {
-        setSeriesData(response.data);
-        // For now, assume 100 episodes max (we don't have episode count in API)
-        // You can adjust this based on actual data or create a separate endpoint check
-        setTotalEpisodes(100);
+    
+    // Fetch both series details and episodes count
+    Promise.all([
+      api.get<SeriesDetailResponse>(`/api/v1/series/${id}`),
+      api.get<EpisodesResponse>(`/api/v1/series/${id}/episodes`)
+    ])
+      .then(([seriesResponse, episodesResponse]) => {
+        setSeriesData(seriesResponse.data);
+        
+        // Set the actual episode count from the API
+        const episodeCount = episodesResponse.data.total || episodesResponse.data.episodes.length;
+        setTotalEpisodes(episodeCount);
         
         // Save initial progress
         saveProgress({
           book_id: id,
-          title: response.data.series.name,
-          pic: response.data.thumbnail,
+          title: seriesResponse.data.series.name,
+          pic: seriesResponse.data.thumbnail,
           chapter: startEp,
-          total: 100,
+          total: episodeCount,
         });
       })
-      .catch(e => console.error('Watch: Failed to fetch series data:', e))
+      .catch(e => {
+        console.error('Watch: Failed to fetch series data:', e);
+        // If episodes endpoint fails, fallback to a reasonable default
+        setTotalEpisodes(100);
+      })
       .finally(() => setLoading(false));
   }, [id, startEp, saveProgress]);
 

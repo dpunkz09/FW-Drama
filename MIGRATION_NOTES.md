@@ -73,8 +73,9 @@ These are Shortical's public Firebase credentials extracted from their website.
 
 ### Episode Count
 Shortical's `/api/v1/series` endpoint doesn't return episode count in the list view.
-- Current workaround: `chapter_count` is set to 0
-- Full episode details might be available in `/api/v1/series/{id}` endpoint
+- Fetches actual episode count from `/api/v1/series/{id}/episodes`
+- Episode list now shows only available episodes
+- Fallback to 100 episodes if API call fails
 
 ## Testing Checklist
 
@@ -96,8 +97,9 @@ Shortical's `/api/v1/series` endpoint doesn't return episode count in the list v
 | Latest | `/api/latest?lang={lang}` | `/api/v1/series?pageSize=15&page=N` |
 | Trending | `/api/trending?lang={lang}` | `/api/v1/series?pageSize=50` (sorted by views) |
 | Search | `/search?keyword={q}&lang={lang}` | Client-side filtering |
-| Details | `/api/details?book_id={id}` | `/api/v1/series/{id}` ❓ |
-| Episodes/Streaming | `/api/stream/all-episode?bookId={id}` | **Unknown** ⚠️ |
+| Details | `/api/details?book_id={id}` | `/api/v1/series/{id}` |
+| Episodes | N/A | `/api/v1/series/{id}/episodes` |
+| Streaming | `/api/stream/all-episode?bookId={id}` | `https://dirjqbe1kaah2.cloudfront.net/{id}/{ep}/video.m3u8` |
 
 ## Notes
 - Shortical uses numeric IDs instead of string book_ids
