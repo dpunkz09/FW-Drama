@@ -6,8 +6,8 @@ import { useSaveProgress } from '../hooks/useWatchProgress';
 import api from '../api/client';
 import type { SeriesDetailResponse, EpisodesResponse } from '../types';
 
-const SWIPE_THRESHOLD = 55;
-const SLIDE_DURATION = 380; // ms
+const SWIPE_THRESHOLD = 50; // Reduced from 55 for easier triggering
+const SLIDE_DURATION = 400; // Slightly longer for smoother animation
 type SlideDir = 'up' | 'down' | null;
 
 const Watch = () => {
@@ -335,22 +335,28 @@ const Watch = () => {
     }
   };
 
-  // Drag calculations
-  const clampedDrag = Math.max(-300, Math.min(300, dragY));
+  // Drag calculations - Enhanced for better visibility
+  const clampedDrag = Math.max(-400, Math.min(400, dragY)); // Increased from 300
+  const dragMultiplier = 0.6; // Increased from 0.45 for more visible movement
+  
   const currentTranslate = isAnimating 
     ? (slideDir === 'up' ? '-100%' : '100%')
-    : `${-clampedDrag * 0.45}px`;
+    : `${-clampedDrag * dragMultiplier}px`;
   
   const stagingTranslate = (() => {
     if (!isAnimating) {
-      if (dragY > 20) return `calc(100% - ${clampedDrag * 0.45}px)`;
-      if (dragY < -20) return `calc(-100% - ${clampedDrag * 0.45}px)`;
+      if (dragY > 15) return `calc(100% - ${clampedDrag * dragMultiplier}px)`;
+      if (dragY < -15) return `calc(-100% - ${clampedDrag * dragMultiplier}px)`;
       return slideDir === 'up' ? '100%' : '-100%';
     }
     return '0%';
   })();
 
-  const transition = isAnimating ? `transform ${SLIDE_DURATION}ms cubic-bezier(0.32, 0.72, 0, 1)` : 'none';
+  const transition = isAnimating ? `transform ${SLIDE_DURATION}ms cubic-bezier(0.25, 0.46, 0.45, 0.94)` : 'none';
+
+  // Calculate drag opacity for visual feedback
+  const dragProgress = Math.min(1, Math.abs(clampedDrag) / SWIPE_THRESHOLD);
+  const dragOpacity = Math.min(0.3, dragProgress * 0.3);
 
   const canGoNext = current < totalEpisodes - 1;
   const canGoPrev = current > 0;
@@ -386,7 +392,14 @@ const Watch = () => {
       onTouchEnd={onTouchEnd}
     >
       {/* CURRENT VIDEO */}
-      <div className="absolute inset-0" style={{ transform: `translateY(${currentTranslate})`, transition }}>
+      <div 
+        className="absolute inset-0" 
+        style={{ 
+          transform: `translateY(${currentTranslate}) scale(${1 - Math.abs(dragProgress) * 0.05})`, 
+          transition,
+          filter: Math.abs(dragY) > 15 ? `brightness(${0.7 + (1 - dragProgress) * 0.3})` : 'none'
+        }}
+      >
         <video
           ref={currentVideoRef}
           className="absolute inset-0 w-full h-full object-contain bg-black"
@@ -404,7 +417,13 @@ const Watch = () => {
 
       {/* STAGING VIDEO */}
       {staging !== null && (
-        <div className="absolute inset-0" style={{ transform: `translateY(${stagingTranslate})`, transition }}>
+        <div 
+          className="absolute inset-0" 
+          style={{ 
+            transform: `translateY(${stagingTranslate}) scale(${0.9 + dragProgress * 0.1})`, 
+            transition 
+          }}
+        >
           <video
             ref={stagingVideoRef}
             className="absolute inset-0 w-full h-full object-contain bg-black"
@@ -415,6 +434,17 @@ const Watch = () => {
         </div>
       )}
 
+      {/* DRAG OVERLAY - Visual feedback while swiping */}
+      {!isAnimating && Math.abs(dragY) > 10 && (
+        <div 
+          className="absolute inset-0 z-15 pointer-events-none transition-opacity duration-200"
+          style={{ 
+            backgroundColor: dragY > 0 ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)',
+            opacity: dragOpacity / 0.3 // Normalize to 0-1
+          }}
+        />
+      )}
+
       {/* BUFFERING SPINNER */}
       {buffering && !isAnimating && (
         <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
@@ -422,27 +452,78 @@ const Watch = () => {
         </div>
       )}
 
-      {/* SWIPE HINTS */}
-      {canGoNext && dragY > 20 && !isAnimating && (
-        <div className="absolute bottom-24 left-0 right-0 z-30 flex flex-col items-center pointer-events-none">
-          <div className="flex flex-col items-center gap-1 transition-opacity" style={{ opacity: Math.min(1, (dragY - 20) / 60) }}>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 5l7 7H5l7-7z" fill="white" opacity="0.6" />
-              <path d="M12 11l7 7H5l7-7z" fill="white" opacity="0.3" />
-            </svg>
-            <p className="text-white/80 text-xs font-semibold">EP {current + 2}</p>
+      {/* SWIPE HINTS - Enhanced */}
+      {canGoNext && dragY > 15 && !isAnimating && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none">
+          <div 
+            className="flex flex-col items-center gap-3 transition-all duration-200" 
+            style={{ 
+              opacity: Math.min(1, (dragY - 15) / 40),
+              transform: `translateY(${Math.min(30, (dragY - 15) * 0.3)}px) scale(${1 + Math.min(0.2, dragProgress * 0.2)})`
+            }}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-red-500/20 blur-xl rounded-full" />
+              <div className="relative bg-gradient-to-b from-red-500 to-red-600 rounded-2xl px-6 py-4 shadow-2xl">
+                <div className="flex flex-col items-center gap-2">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="animate-bounce">
+                    <path d="M12 4l7 7H5l7-7z" fill="white" opacity="0.9" />
+                    <path d="M12 10l7 7H5l7-7z" fill="white" opacity="0.6" />
+                    <path d="M12 16l7 7H5l7-7z" fill="white" opacity="0.3" />
+                  </svg>
+                  <div className="text-center">
+                    <p className="text-white font-bold text-lg">Next Episode</p>
+                    <p className="text-white/90 text-sm mt-0.5">EP {current + 2}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <p className="text-white/70 text-xs font-medium">Swipe up to continue</p>
           </div>
         </div>
       )}
 
-      {canGoPrev && dragY < -20 && !isAnimating && (
-        <div className="absolute top-24 left-0 right-0 z-30 flex flex-col items-center pointer-events-none">
-          <div className="flex flex-col items-center gap-1 transition-opacity" style={{ opacity: Math.min(1, (-dragY - 20) / 60) }}>
-            <p className="text-white/80 text-xs font-semibold">EP {current}</p>
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 19l7-7H5l7 7z" fill="white" opacity="0.6" />
-              <path d="M12 13l7-7H5l7 7z" fill="white" opacity="0.3" />
-            </svg>
+      {canGoPrev && dragY < -15 && !isAnimating && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center pointer-events-none">
+          <div 
+            className="flex flex-col items-center gap-3 transition-all duration-200" 
+            style={{ 
+              opacity: Math.min(1, (-dragY - 15) / 40),
+              transform: `translateY(${Math.max(-30, (dragY + 15) * 0.3)}px) scale(${1 + Math.min(0.2, dragProgress * 0.2)})`
+            }}
+          >
+            <div className="relative">
+              <div className="absolute inset-0 bg-blue-500/20 blur-xl rounded-full" />
+              <div className="relative bg-gradient-to-b from-blue-500 to-blue-600 rounded-2xl px-6 py-4 shadow-2xl">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="text-center">
+                    <p className="text-white font-bold text-lg">Previous Episode</p>
+                    <p className="text-white/90 text-sm mt-0.5">EP {current}</p>
+                  </div>
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" className="animate-bounce">
+                    <path d="M12 20l7-7H5l7 7z" fill="white" opacity="0.9" />
+                    <path d="M12 14l7-7H5l7 7z" fill="white" opacity="0.6" />
+                    <path d="M12 8l7-7H5l7 7z" fill="white" opacity="0.3" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+            <p className="text-white/70 text-xs font-medium">Swipe down to go back</p>
+          </div>
+        </div>
+      )}
+
+      {/* SWIPE PROGRESS BAR */}
+      {!isAnimating && Math.abs(dragY) > 15 && (
+        <div className="absolute left-0 right-0 z-30 pointer-events-none" style={{ top: dragY > 0 ? 'auto' : '0', bottom: dragY > 0 ? '0' : 'auto' }}>
+          <div className="h-1 bg-white/10">
+            <div 
+              className="h-full transition-all duration-100"
+              style={{ 
+                width: `${Math.min(100, dragProgress * 100)}%`,
+                backgroundColor: dragY > 0 ? '#ef4444' : '#3b82f6'
+              }} 
+            />
           </div>
         </div>
       )}
